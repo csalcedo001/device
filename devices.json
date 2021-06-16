@@ -1,1 +1,1 @@
-{"khipu": {"type": "ssh", "ips": ["khipu.utec.edu.pe"], "user": "cesar.salcedo"}}
+{"khipu": {"type": "ssh", "ips": ["cesar.salcedo@khipu.utec.edu.pe"]}}

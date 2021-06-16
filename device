@@ -2,17 +2,24 @@
 
 import click
 import json
+import os
 
 @click.group()
 def cli():
 	pass
 
-# Device list manipulation commands
+
+
+### Device list manipulation commands
+	
+@click.group()
+def add():
+	pass
+
 @click.command()
 @click.argument("name")
 @click.argument("ip")
-@click.option("-u", "--user", help="Username used to access device")
-def ssh(name, ip, user):
+def ssh(name, ip):
 	ips = ip.split(":")
 
 	with open("devices.json") as input_json:
@@ -20,21 +27,17 @@ def ssh(name, ip, user):
 	
 	if name in devices:
 		click.echo("Device named '{}' already exists.".format(name))
+		return
 
 	device_description = {
 		"type": "ssh",
-		"ips": ips,
-		"user": user
+		"ips": ips
 	}
 
 	devices[name] = device_description
 
 	with open("devices.json", "w") as output_json:
 		json.dump(devices, output_json)
-	
-@click.group()
-def add():
-	pass
 
 add.add_command(ssh)
 
@@ -45,7 +48,8 @@ def rm(name):
 		devices = json.load(input_json)
 
 	if name not in devices:
-		click.echo("Device named '{}' doesn't exist.".format(name))
+		click.echo("No device named '{}' found.".format(name))
+		return
 
 	del devices[name]
 
@@ -53,9 +57,11 @@ def rm(name):
 		json.dump(devices, output_json)
 
 
-# Device list observation commands
+
+
+### Device list observation commands
 @click.command()
-def list():
+def ls():
 	with open("devices.json", "r") as input_json:
 		devices = json.load(input_json)
 
@@ -66,21 +72,38 @@ def list():
 	click.echo()
 
 
+
+
 # Connection commands
 @click.command()
-def connect():
-	print("Connecting to device...")
+@click.argument("name")
+def connect(name):
+	click.echo("Connecting to '{}'...".format(name))
+
+	with open("devices.json", "r") as input_json:
+		devices = json.load(input_json)
+
+	if name not in devices:
+		click.echo("No device named '{}' found.".format(name))
+		return
+	
+	command = "ssh " + " -t ".join(devices[name]["ips"])
+	os.system(command)
+	
+
 
 @click.command()
 def tunnel():
 	print("Tunneling to device...")
 
 
+
 cli.add_command(add)
-cli.add_command(remove)
+cli.add_command(rm)
+cli.add_command(ls)
 cli.add_command(connect)
 cli.add_command(tunnel)
-cli.add_command(list)
+
 
 if __name__ == '__main__':
 	cli()
