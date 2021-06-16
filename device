@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+import click
+import json
+
+@click.group()
+def cli():
+	pass
+
+# Device list manipulation commands
+@click.command()
+@click.argument("name")
+@click.argument("ip")
+@click.option("-u", "--user", help="Username used to access device")
+def ssh(name, ip, user):
+	ips = ip.split(":")
+
+	with open("devices.json") as input_json:
+		devices = json.load(input_json)
+	
+	if name in devices:
+		click.echo("Device named '{}' already exists.".format(name))
+
+	device_description = {
+		"type": "ssh",
+		"ips": ips,
+		"user": user
+	}
+
+	devices[name] = device_description
+
+	with open("devices.json", "w") as output_json:
+		json.dump(devices, output_json)
+	
+@click.group()
+def add():
+	pass
+
+add.add_command(ssh)
+
+@click.command()
+@click.argument("name")
+def rm(name):
+	with open("devices.json") as input_json:
+		devices = json.load(input_json)
+
+	if name not in devices:
+		click.echo("Device named '{}' doesn't exist.".format(name))
+
+	del devices[name]
+
+	with open("devices.json", "w") as output_json:
+		json.dump(devices, output_json)
+
+
+# Device list observation commands
+@click.command()
+def list():
+	with open("devices.json", "r") as input_json:
+		devices = json.load(input_json)
+
+	click.echo("List of available devices:")
+	for name in devices:
+		click.echo("* {}: type={}".format(name, devices[name]["type"]))
+	
+	click.echo()
+
+
+# Connection commands
+@click.command()
+def connect():
+	print("Connecting to device...")
+
+@click.command()
+def tunnel():
+	print("Tunneling to device...")
+
+
+cli.add_command(add)
+cli.add_command(remove)
+cli.add_command(connect)
+cli.add_command(tunnel)
+cli.add_command(list)
+
+if __name__ == '__main__':
+	cli()
