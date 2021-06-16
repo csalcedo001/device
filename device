@@ -41,7 +41,33 @@ def ssh(name, ip):
 	with open("devices.json", "w") as output_json:
 		json.dump(devices, output_json)
 
+@click.command()
+@click.argument("name")
+@click.option("--container", help="Container name")
+def docker(name, container):
+	with open("devices.json") as input_json:
+		devices = json.load(input_json)
+	
+	if name in devices:
+		click.echo("Device named '{}' already exists.".format(name))
+		return
+
+	if container == None:
+		container = name
+
+	device_description = {
+		"type": "docker",
+		"container": container
+	}
+
+	devices[name] = device_description
+
+	with open("devices.json", "w") as output_json:
+		json.dump(devices, output_json)
+
 add.add_command(ssh)
+add.add_command(docker)
+
 
 @click.command()
 @click.argument("name")
@@ -86,9 +112,13 @@ def connect(name):
 	if name not in devices:
 		click.echo("No device named '{}' found.".format(name))
 		return
+
+	device_type = devices[name]["type"]
 	
 	if device_type == "ssh":
 		command = "ssh " + " -t ssh ".join(devices[name]["ips"])
+	elif device_type == "docker":
+		command = "./docker_connect.sh {}".format(devices[name]["container"])
 
 	click.echo("Connecting to '{}'...".format(name))
 	os.system(command)
