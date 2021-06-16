@@ -4,6 +4,9 @@ import click
 import json
 import os
 
+
+### Main CLI
+
 @click.group()
 def cli():
 	pass
@@ -18,10 +21,9 @@ def add():
 
 @click.command()
 @click.argument("name")
-@click.argument("ip")
+@click.argument("ip", nargs=-1)
 def ssh(name, ip):
-	ips = ip.split(":")
-
+	ips = list(ip)
 	with open("devices.json") as input_json:
 		devices = json.load(input_json)
 	
@@ -78,8 +80,6 @@ def ls():
 @click.command()
 @click.argument("name")
 def connect(name):
-	click.echo("Connecting to '{}'...".format(name))
-
 	with open("devices.json", "r") as input_json:
 		devices = json.load(input_json)
 
@@ -87,15 +87,33 @@ def connect(name):
 		click.echo("No device named '{}' found.".format(name))
 		return
 	
-	command = "ssh " + " -t ".join(devices[name]["ips"])
+	if device_type == "ssh":
+		command = "ssh " + " -t ssh ".join(devices[name]["ips"])
+
+	click.echo("Connecting to '{}'...".format(name))
 	os.system(command)
 	
 
 
 @click.command()
-def tunnel():
-	print("Tunneling to device...")
+@click.argument("name")
+@click.argument("port")
+def tunnel(name, port):
+	with open("devices.json", "r") as input_json:
+		devices = json.load(input_json)
 
+	if name not in devices:
+		click.echo("No device named '{}' found.".format(name))
+		return
+
+	device_type = devices[name]["type"]
+
+	if device_type == "ssh":
+		ssh_command = "ssh -L {0}:localhost:{0} ".format(port)
+		command = ssh_command + (" -t " + ssh_command).join(devices[name]["ips"])
+
+	click.echo("Tunneling to '{}' through port '{}'...".format(name, port))
+	os.system(command)
 
 
 cli.add_command(add)
