@@ -3,6 +3,20 @@
 import click
 import json
 import os
+import pathlib
+
+root_path = pathlib.Path(__file__).parent.absolute()
+devices_json_path = os.path.join(root_path, "devices.json")
+
+def load_devices():
+	with open(devices_json_path) as input_json:
+		devices = json.load(input_json)
+	
+	return devices
+
+def save_devices(devices):
+	with open(devices_json_path, "w") as output_json:
+		json.dump(devices, output_json)
 
 
 ### Main CLI
@@ -23,13 +37,13 @@ def add():
 @click.argument("name")
 @click.argument("ip", nargs=-1)
 def ssh(name, ip):
-	ips = list(ip)
-	with open("devices.json") as input_json:
-		devices = json.load(input_json)
+	devices = load_devices()
 	
 	if name in devices:
 		click.echo("Device named '{}' already exists.".format(name))
 		return
+
+	ips = list(ip)
 
 	device_description = {
 		"type": "ssh",
@@ -38,15 +52,13 @@ def ssh(name, ip):
 
 	devices[name] = device_description
 
-	with open("devices.json", "w") as output_json:
-		json.dump(devices, output_json)
+	save_devices(devices)
 
 @click.command()
 @click.argument("name")
 @click.option("--container", help="Container name")
 def docker(name, container):
-	with open("devices.json") as input_json:
-		devices = json.load(input_json)
+	devices = load_devices()
 	
 	if name in devices:
 		click.echo("Device named '{}' already exists.".format(name))
@@ -62,8 +74,7 @@ def docker(name, container):
 
 	devices[name] = device_description
 
-	with open("devices.json", "w") as output_json:
-		json.dump(devices, output_json)
+	save_devices(devices)
 
 add.add_command(ssh)
 add.add_command(docker)
@@ -72,8 +83,7 @@ add.add_command(docker)
 @click.command()
 @click.argument("name")
 def rm(name):
-	with open("devices.json") as input_json:
-		devices = json.load(input_json)
+	devices = load_devices()
 
 	if name not in devices:
 		click.echo("No device named '{}' found.".format(name))
@@ -81,8 +91,7 @@ def rm(name):
 
 	del devices[name]
 
-	with open("devices.json", "w") as output_json:
-		json.dump(devices, output_json)
+	save_devices(devices)
 
 
 
@@ -90,8 +99,7 @@ def rm(name):
 ### Device list observation commands
 @click.command()
 def ls():
-	with open("devices.json", "r") as input_json:
-		devices = json.load(input_json)
+	devices = load_devices()
 
 	click.echo("List of available devices:")
 	for name in devices:
@@ -106,8 +114,7 @@ def ls():
 @click.command()
 @click.argument("name")
 def connect(name):
-	with open("devices.json", "r") as input_json:
-		devices = json.load(input_json)
+	devices = load_devices()
 
 	if name not in devices:
 		click.echo("No device named '{}' found.".format(name))
@@ -118,7 +125,7 @@ def connect(name):
 	if device_type == "ssh":
 		command = "ssh " + " -t ssh ".join(devices[name]["ips"])
 	elif device_type == "docker":
-		command = "./docker_connect.sh {}".format(devices[name]["container"])
+		command = "docker_connect.sh {}".format(devices[name]["container"])
 
 	click.echo("Connecting to '{}'...".format(name))
 	os.system(command)
@@ -129,8 +136,7 @@ def connect(name):
 @click.argument("name")
 @click.argument("port")
 def tunnel(name, port):
-	with open("devices.json", "r") as input_json:
-		devices = json.load(input_json)
+	devices = load_devices()
 
 	if name not in devices:
 		click.echo("No device named '{}' found.".format(name))
