@@ -1,1 +1,0 @@
-{"khipu": {"type": "ssh", "ips": ["cesar.salcedo@khipu.utec.edu.pe"]}, "ubuntu": {"type": "docker", "container": "ubuntu"}}
