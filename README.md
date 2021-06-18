@@ -21,11 +21,11 @@ device connect <name>
 
 ### Add a device
 
-Add a new device with the `add` subcommand. There are two types of device connections: ssh and docker. Both type require share a common required parameter: name.
+Add a new device with the `add` subcommand. There are two types of device connections: ssh and docker. Both types share a common required parameter: the name of the device.
 
 #### Add ssh connection
 
-An ssh connection additionally requires an IP to establish a remote connection. Support for multiple IPs is also given when a chain of ssh connections is required.
+An device connected through ssh additionally requires an IP to establish a remote connection. Support for multiple IPs is also given when a chain of ssh connections is desired.
 
 ```
 device add ssh <name> <IP> [<IP> ...]
@@ -33,7 +33,7 @@ device add ssh <name> <IP> [<IP> ...]
 
 #### Add docker connection
 
-A docker connection requires the container name to start an interactive session. In the case the container doesn't exist, a new container is created with the image `ubuntu:latest`.
+A docker connection requires the container's name to start an interactive session. In the case the container doesn't exist, a new container is created following the image `ubuntu:latest`.
 
 
 ```
@@ -48,11 +48,11 @@ To see the list of saved devices use the `ls` subcommand.
 device ls
 ```
 
-A list of devices identified by its names is presented.
+A list of devices identified by their names is presented.
 
 ### Remove a device
 
-If a connection needs to be removed, use the `rm` subcommand.
+If a connection needs to be removed, use the `rm` subcommand and give the name of the device as a parameter.
 
 ```
 device rm <name>
@@ -60,7 +60,7 @@ device rm <name>
 
 ### Connect to device
 
-When you are ready to connect to a device you just need to use the `connect` subcommand and provide the name of the device.
+When you are ready to connect to a device, use the `connect` subcommand and provide the name of the device.
 
 ```
 device connect <name>
