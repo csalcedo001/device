@@ -8,6 +8,7 @@ import pathlib
 root_path = pathlib.Path(__file__).parent.absolute()
 devices_json_path = os.path.join(root_path, "devices.json")
 
+
 def load_devices():
 	with open(devices_json_path) as input_json:
 		devices = json.load(input_json)
@@ -17,6 +18,10 @@ def load_devices():
 def save_devices(devices):
 	with open(devices_json_path, "w") as output_json:
 		json.dump(devices, output_json)
+
+
+if not os.path.exists(devices_json_path):
+	save_devices({})
 
 
 ### Main CLI
