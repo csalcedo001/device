@@ -91,7 +91,7 @@ def rm(name):
 	devices = load_devices()
 
 	if name not in devices:
-		click.echo("No device named '{}' found.".format(name))
+		click.echo("error: No device named '{}' found.".format(name))
 		return
 
 	del devices[name]
@@ -112,6 +112,33 @@ def ls():
 	
 	click.echo()
 
+
+
+
+### Device list observation commands
+@click.command()
+@click.argument("name")
+@click.argument("attribute")
+def info(name, attribute):
+	devices = load_devices()
+
+	if name not in devices:
+		click.echo("error: No device named '{}' found.".format(name))
+		return
+	
+	if attribute != 'attributes' and attribute not in devices[name]:
+		click.echo("error: No attribute '{}' for device '{}' of type '{}'.".format(attribute, name, devices[name]['type']))
+		return
+	
+	if attribute == 'attributes':
+		value = list(devices[name].keys())
+	else:
+		value = devices[name][attribute]
+		
+	if type(value) == list:
+		value = '\n'.join(value)
+
+	click.echo(value)
 
 
 
@@ -216,6 +243,7 @@ def cp(source, dest, recursive):
 cli.add_command(add)
 cli.add_command(rm)
 cli.add_command(ls)
+cli.add_command(info)
 cli.add_command(connect)
 cli.add_command(tunnel)
 cli.add_command(cp)

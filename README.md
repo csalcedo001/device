@@ -52,6 +52,16 @@ device ls
 
 A list of devices identified by their names is presented.
 
+### View information from a device
+
+Access information for a given device by calling:
+
+```
+device info <name> <attribute>
+```
+
+where `attribute` is a key that identifies the attribute for some device named `name`. To list all available attributes for some device, set call `device info <name> attributes`.
+
 ### Remove a device
 
 If a connection needs to be removed, use the `rm` subcommand and give the name of the device as a parameter.
