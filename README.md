@@ -1,4 +1,6 @@
-# Device connection manager
+# Device
+
+Device connection manager.
 
 ## Installation
 
@@ -65,3 +67,13 @@ When you are ready to connect to a device, use the `connect` subcommand and prov
 ```
 device connect <name>
 ```
+
+### Copy files across devices
+
+Copy files from and to devices with the following command:
+
+```
+device cp <source> <dest>
+```
+
+where `source` and `dest` can be regular paths or have the form `<device_name>:<path>` to access files in the device.

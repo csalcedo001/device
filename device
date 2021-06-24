@@ -157,11 +157,62 @@ def tunnel(name, port):
 	os.system(command)
 
 
+@click.command()
+@click.argument("source")
+@click.argument("dest")
+def cp(source, dest):
+	source_parts = source.split(":")
+	if len(source_parts) > 2:
+		click.echo("error: Invalid source {}.".format(source))
+		return
+
+	dest_parts = dest.split(":")
+	if len(dest_parts) > 2:
+		click.echo("error: Invalid destination {}.".format(dest))
+		return
+
+	
+	devices = load_devices()
+	
+	if len(source_parts) == 1 or source_parts[0] in devices:
+		source_path = source
+	else:
+		device = devices[source_parts[0]]
+
+		if device["type"] == "docker":
+			click.echo("error: copy command for device of type 'docker' is not supported.")
+			return
+
+		if len(device["ips"]) > 1:
+			click.echo("error: copy command for multiple IPs is not supported.")
+			return
+
+		source_path = device["ips"][0] + ":" + source_parts[1]
+	
+	if len(dest_parts) == 1 or dest_parts[0] not in devices:
+		dest_path = dest
+	else:
+		device = devices[dest_parts[0]]
+
+		if device["type"] == "docker":
+			click.echo("error: copy command for device of type 'docker' is not supported.")
+			return
+
+		if len(device["ips"]) > 1:
+			click.echo("error: copy command for multiple IPs is not supported.")
+			return
+
+		dest_path = device["ips"][0] + ":" + dest_parts[1]
+	
+	command = "scp {} {}".format(source_path, dest_path)
+	os.system(command)
+
 cli.add_command(add)
 cli.add_command(rm)
 cli.add_command(ls)
 cli.add_command(connect)
 cli.add_command(tunnel)
+cli.add_command(cp)
 
 
 if __name__ == '__main__':
