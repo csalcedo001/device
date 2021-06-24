@@ -160,7 +160,8 @@ def tunnel(name, port):
 @click.command()
 @click.argument("source")
 @click.argument("dest")
-def cp(source, dest):
+@click.option("-r", "--recursive", is_flag=True, default=False)
+def cp(source, dest, recursive):
 	source_parts = source.split(":")
 	if len(source_parts) > 2:
 		click.echo("error: Invalid source {}.".format(source))
@@ -204,7 +205,12 @@ def cp(source, dest):
 
 		dest_path = device["ips"][0] + ":" + dest_parts[1]
 	
-	command = "scp {} {}".format(source_path, dest_path)
+	flags = ""
+	if recursive:
+		flags += "-r "
+
+	command = "scp {} {} {}".format(flags, source_path, dest_path)
+
 	os.system(command)
 
 cli.add_command(add)
