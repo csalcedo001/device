@@ -202,7 +202,7 @@ def cp(source, dest, recursive):
 	
 	devices = load_devices()
 	
-	if len(source_parts) == 1 or source_parts[0] in devices:
+	if len(source_parts) == 1 or not source_parts[0] in devices:
 		source_path = source
 	else:
 		device = devices[source_parts[0]]
@@ -217,7 +217,7 @@ def cp(source, dest, recursive):
 
 		source_path = device["ips"][0] + ":" + source_parts[1]
 	
-	if len(dest_parts) == 1 or dest_parts[0] not in devices:
+	if len(dest_parts) == 1 or not dest_parts[0] in devices:
 		dest_path = dest
 	else:
 		device = devices[dest_parts[0]]
