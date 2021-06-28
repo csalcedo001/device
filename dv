@@ -24,6 +24,9 @@ if not os.path.exists(devices_json_path):
 	save_devices({})
 
 
+def get_devices_match(ctx, args, incomplete):
+	return [k for k in load_devices().keys() if incomplete in k]
+
 ### Main CLI
 
 @click.group()
@@ -39,7 +42,7 @@ def add():
 	pass
 
 @click.command()
-@click.argument("name")
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.argument("ip", nargs=-1)
 def ssh(name, ip):
 	devices = load_devices()
@@ -60,7 +63,7 @@ def ssh(name, ip):
 	save_devices(devices)
 
 @click.command()
-@click.argument("name")
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.option("--container", help="Container name")
 def docker(name, container):
 	devices = load_devices()
@@ -86,7 +89,7 @@ add.add_command(docker)
 
 
 @click.command()
-@click.argument("name")
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 def rm(name):
 	devices = load_devices()
 
@@ -117,7 +120,7 @@ def ls():
 
 ### Device list observation commands
 @click.command()
-@click.argument("name")
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.argument("attribute")
 def info(name, attribute):
 	devices = load_devices()
@@ -144,7 +147,7 @@ def info(name, attribute):
 
 # Connection commands
 @click.command()
-@click.argument("name")
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 def connect(name):
 	devices = load_devices()
 
@@ -165,7 +168,7 @@ def connect(name):
 
 
 @click.command()
-@click.argument("name")
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.argument("port")
 def tunnel(name, port):
 	devices = load_devices()
