@@ -4,20 +4,19 @@ Device connection manager.
 
 ## Installation
 
-1. Clone the repository to the location of your preference
-
 ```
-git clone https://github.com/csalcedo001/device.git
+brew tap csalcedo001/formulas
+brew install device
 ```
-
-2. Add the path to the repository to your `.bash_profile` or `.bashrc` files.
 
 ## Quickstart
 
 ```
-dv add ssh <name> <IP>
-dv connect <name>
+dv add ssh <device_name> <username>@<IP>
+dv connect <device_name>
 ```
+
+The console will prompt for authentication. After that, you are all set!
 
 ## Guide
 
