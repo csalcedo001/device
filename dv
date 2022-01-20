@@ -205,6 +205,10 @@ def cp(source, dest, recursive):
 	
 	devices = load_devices()
 	
+	flags = ""
+	if recursive:
+		flags += "-r "
+	
 	if len(source_parts) == 1 or not source_parts[0] in devices:
 		source_path = source
 	else:
@@ -214,11 +218,19 @@ def cp(source, dest, recursive):
 			click.echo("error: copy command for device of type 'docker' is not supported.")
 			return
 
-		if len(device["ips"]) > 1:
-			click.echo("error: copy command for multiple IPs is not supported.")
+		source_path = device["ips"][-1] + ":" + source_parts[1]
+		if len(device["ips"]) == 1:
+			pass
+		elif len(device["ips"]) == 2:
+			proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
+			proxy_command += device["ips"][0]
+			proxy_command += "\" "
+			
+			flags += proxy_command
+		else:
+			click.echo("error: copy command for more than 2 IPs is not supported.")
 			return
 
-		source_path = device["ips"][0] + ":" + source_parts[1]
 	
 	if len(dest_parts) == 1 or not dest_parts[0] in devices:
 		dest_path = dest
@@ -229,15 +241,18 @@ def cp(source, dest, recursive):
 			click.echo("error: copy command for device of type 'docker' is not supported.")
 			return
 
-		if len(device["ips"]) > 1:
-			click.echo("error: copy command for multiple IPs is not supported.")
+		dest_path = device["ips"][-1] + ":" + dest_parts[1]
+		if len(device["ips"]) == 1:
+			pass
+		elif len(device["ips"]) == 2:
+			proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
+			proxy_command += device["ips"][0]
+			proxy_command += "\" "
+			
+			flags += proxy_command
+		else:
+			click.echo("error: copy command for more than 2 IPs is not supported.")
 			return
-
-		dest_path = device["ips"][0] + ":" + dest_parts[1]
-	
-	flags = ""
-	if recursive:
-		flags += "-r "
 
 	command = "scp {} {} {}".format(flags, source_path, dest_path)
 
