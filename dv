@@ -20,9 +20,6 @@ def save_devices(devices):
 		json.dump(devices, output_json)
 
 
-if not os.path.exists(devices_json_path):
-	save_devices({})
-
 
 def get_devices_match(ctx, args, incomplete):
 	return [k for k in load_devices().keys() if incomplete in k]
@@ -268,4 +265,9 @@ cli.add_command(cp)
 
 
 if __name__ == '__main__':
+	if not os.path.exists(root_path):
+		os.mkdir(root_path)
+	if not os.path.exists(devices_json_path):
+		save_devices({})
+        
 	cli()
