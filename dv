@@ -10,76 +10,76 @@ devices_json_path = os.path.join(root_path, "devices.json")
 
 
 def load_devices():
-	with open(devices_json_path) as input_json:
-		devices = json.load(input_json)
-	
-	return devices
+    with open(devices_json_path) as input_json:
+        devices = json.load(input_json)
+    
+    return devices
 
 def save_devices(devices):
-	with open(devices_json_path, "w") as output_json:
-		json.dump(devices, output_json)
+    with open(devices_json_path, "w") as output_json:
+        json.dump(devices, output_json)
 
 
 
 def get_devices_match(ctx, args, incomplete):
-	return [k for k in load_devices().keys() if incomplete in k]
+    return [k for k in load_devices().keys() if incomplete in k]
 
 ### Main CLI
 
 @click.group()
 def cli():
-	pass
+    pass
 
 
 
 ### Device list manipulation commands
-	
+    
 @click.group()
 def add():
-	pass
+    pass
 
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.argument("ip", nargs=-1)
 def ssh(name, ip):
-	devices = load_devices()
-	
-	if name in devices:
-		click.echo("Device named '{}' already exists.".format(name))
-		return
+    devices = load_devices()
+    
+    if name in devices:
+        click.echo("Device named '{}' already exists.".format(name))
+        return
 
-	ips = list(ip)
+    ips = list(ip)
 
-	device_description = {
-		"type": "ssh",
-		"ips": ips
-	}
+    device_description = {
+        "type": "ssh",
+        "ips": ips
+    }
 
-	devices[name] = device_description
+    devices[name] = device_description
 
-	save_devices(devices)
+    save_devices(devices)
 
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.option("--container", help="Container name")
 def docker(name, container):
-	devices = load_devices()
-	
-	if name in devices:
-		click.echo("Device named '{}' already exists.".format(name))
-		return
+    devices = load_devices()
+    
+    if name in devices:
+        click.echo("Device named '{}' already exists.".format(name))
+        return
 
-	if container == None:
-		container = name
+    if container == None:
+        container = name
 
-	device_description = {
-		"type": "docker",
-		"container": container
-	}
+    device_description = {
+        "type": "docker",
+        "container": container
+    }
 
-	devices[name] = device_description
+    devices[name] = device_description
 
-	save_devices(devices)
+    save_devices(devices)
 
 add.add_command(ssh)
 add.add_command(docker)
@@ -88,15 +88,15 @@ add.add_command(docker)
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 def rm(name):
-	devices = load_devices()
+    devices = load_devices()
 
-	if name not in devices:
-		click.echo("error: No device named '{}' found.".format(name))
-		return
+    if name not in devices:
+        click.echo("error: No device named '{}' found.".format(name))
+        return
 
-	del devices[name]
+    del devices[name]
 
-	save_devices(devices)
+    save_devices(devices)
 
 
 
@@ -104,13 +104,13 @@ def rm(name):
 ### Device list observation commands
 @click.command()
 def ls():
-	devices = load_devices()
+    devices = load_devices()
 
-	click.echo("List of available devices:")
-	for name in devices:
-		click.echo("* {}: type={}".format(name, devices[name]["type"]))
-	
-	click.echo()
+    click.echo("List of available devices:")
+    for name in devices:
+        click.echo("* {}: type={}".format(name, devices[name]["type"]))
+    
+    click.echo()
 
 
 
@@ -120,25 +120,25 @@ def ls():
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.argument("attribute")
 def info(name, attribute):
-	devices = load_devices()
+    devices = load_devices()
 
-	if name not in devices:
-		click.echo("error: No device named '{}' found.".format(name))
-		return
-	
-	if attribute != 'attributes' and attribute not in devices[name]:
-		click.echo("error: No attribute '{}' for device '{}' of type '{}'.".format(attribute, name, devices[name]['type']))
-		return
-	
-	if attribute == 'attributes':
-		value = list(devices[name].keys())
-	else:
-		value = devices[name][attribute]
-		
-	if type(value) == list:
-		value = '\n'.join(value)
+    if name not in devices:
+        click.echo("error: No device named '{}' found.".format(name))
+        return
+    
+    if attribute != 'attributes' and attribute not in devices[name]:
+        click.echo("error: No attribute '{}' for device '{}' of type '{}'.".format(attribute, name, devices[name]['type']))
+        return
+    
+    if attribute == 'attributes':
+        value = list(devices[name].keys())
+    else:
+        value = devices[name][attribute]
+        
+    if type(value) == list:
+        value = '\n'.join(value)
 
-	click.echo(value)
+    click.echo(value)
 
 
 
@@ -146,42 +146,42 @@ def info(name, attribute):
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 def connect(name):
-	devices = load_devices()
+    devices = load_devices()
 
-	if name not in devices:
-		click.echo("No device named '{}' found.".format(name))
-		return
+    if name not in devices:
+        click.echo("No device named '{}' found.".format(name))
+        return
 
-	device_type = devices[name]["type"]
-	
-	if device_type == "ssh":
-		command = "ssh " + " -t ssh ".join(devices[name]["ips"])
-	elif device_type == "docker":
-		command = "docker_connect.sh {}".format(devices[name]["container"])
+    device_type = devices[name]["type"]
+    
+    if device_type == "ssh":
+        command = "ssh " + " -t ssh ".join(devices[name]["ips"])
+    elif device_type == "docker":
+        command = "docker_connect.sh {}".format(devices[name]["container"])
 
-	click.echo("Connecting to '{}'...".format(name))
-	os.system(command)
-	
+    click.echo("Connecting to '{}'...".format(name))
+    os.system(command)
+    
 
 
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.argument("port")
 def tunnel(name, port):
-	devices = load_devices()
+    devices = load_devices()
 
-	if name not in devices:
-		click.echo("No device named '{}' found.".format(name))
-		return
+    if name not in devices:
+        click.echo("No device named '{}' found.".format(name))
+        return
 
-	device_type = devices[name]["type"]
+    device_type = devices[name]["type"]
 
-	if device_type == "ssh":
-		ssh_command = "ssh -L {0}:localhost:{0} ".format(port)
-		command = ssh_command + (" -t " + ssh_command).join(devices[name]["ips"])
+    if device_type == "ssh":
+        ssh_command = "ssh -L {0}:localhost:{0} ".format(port)
+        command = ssh_command + (" -t " + ssh_command).join(devices[name]["ips"])
 
-	click.echo("Tunneling to '{}' through port '{}'...".format(name, port))
-	os.system(command)
+    click.echo("Tunneling to '{}' through port '{}'...".format(name, port))
+    os.system(command)
 
 
 @click.command()
@@ -189,71 +189,71 @@ def tunnel(name, port):
 @click.argument("dest")
 @click.option("-r", "--recursive", is_flag=True, default=False)
 def cp(source, dest, recursive):
-	source_parts = source.split(":")
-	if len(source_parts) > 2:
-		click.echo("error: Invalid source {}.".format(source))
-		return
+    source_parts = source.split(":")
+    if len(source_parts) > 2:
+        click.echo("error: Invalid source {}.".format(source))
+        return
 
-	dest_parts = dest.split(":")
-	if len(dest_parts) > 2:
-		click.echo("error: Invalid destination {}.".format(dest))
-		return
+    dest_parts = dest.split(":")
+    if len(dest_parts) > 2:
+        click.echo("error: Invalid destination {}.".format(dest))
+        return
 
-	
-	devices = load_devices()
-	
-	flags = ""
-	if recursive:
-		flags += "-r "
-	
-	if len(source_parts) == 1 or not source_parts[0] in devices:
-		source_path = source
-	else:
-		device = devices[source_parts[0]]
+    
+    devices = load_devices()
+    
+    flags = ""
+    if recursive:
+        flags += "-r "
+    
+    if len(source_parts) == 1 or not source_parts[0] in devices:
+        source_path = source
+    else:
+        device = devices[source_parts[0]]
 
-		if device["type"] == "docker":
-			click.echo("error: copy command for device of type 'docker' is not supported.")
-			return
+        if device["type"] == "docker":
+            click.echo("error: copy command for device of type 'docker' is not supported.")
+            return
 
-		source_path = device["ips"][-1] + ":" + source_parts[1]
-		if len(device["ips"]) == 1:
-			pass
-		elif len(device["ips"]) == 2:
-			proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
-			proxy_command += device["ips"][0]
-			proxy_command += "\" "
-			
-			flags += proxy_command
-		else:
-			click.echo("error: copy command for more than 2 IPs is not supported.")
-			return
+        source_path = device["ips"][-1] + ":" + source_parts[1]
+        if len(device["ips"]) == 1:
+            pass
+        elif len(device["ips"]) == 2:
+            proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
+            proxy_command += device["ips"][0]
+            proxy_command += "\" "
+            
+            flags += proxy_command
+        else:
+            click.echo("error: copy command for more than 2 IPs is not supported.")
+            return
 
-	
-	if len(dest_parts) == 1 or not dest_parts[0] in devices:
-		dest_path = dest
-	else:
-		device = devices[dest_parts[0]]
+    
+    if len(dest_parts) == 1 or not dest_parts[0] in devices:
+        dest_path = dest
+    else:
+        device = devices[dest_parts[0]]
 
-		if device["type"] == "docker":
-			click.echo("error: copy command for device of type 'docker' is not supported.")
-			return
+        if device["type"] == "docker":
+            click.echo("error: copy command for device of type 'docker' is not supported.")
+            return
 
-		dest_path = device["ips"][-1] + ":" + dest_parts[1]
-		if len(device["ips"]) == 1:
-			pass
-		elif len(device["ips"]) == 2:
-			proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
-			proxy_command += device["ips"][0]
-			proxy_command += "\" "
-			
-			flags += proxy_command
-		else:
-			click.echo("error: copy command for more than 2 IPs is not supported.")
-			return
+        dest_path = device["ips"][-1] + ":" + dest_parts[1]
+        if len(device["ips"]) == 1:
+            pass
+        elif len(device["ips"]) == 2:
+            proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
+            proxy_command += device["ips"][0]
+            proxy_command += "\" "
+            
+            flags += proxy_command
+        else:
+            click.echo("error: copy command for more than 2 IPs is not supported.")
+            return
 
-	command = "scp {} {} {}".format(flags, source_path, dest_path)
+    command = "scp {} {} {}".format(flags, source_path, dest_path)
 
-	os.system(command)
+    os.system(command)
 
 cli.add_command(add)
 cli.add_command(rm)
@@ -265,9 +265,9 @@ cli.add_command(cp)
 
 
 if __name__ == '__main__':
-	if not os.path.exists(root_path):
-		os.mkdir(root_path)
-	if not os.path.exists(devices_json_path):
-		save_devices({})
+    if not os.path.exists(root_path):
+        os.mkdir(root_path)
+    if not os.path.exists(devices_json_path):
+        save_devices({})
         
-	cli()
+    cli()
