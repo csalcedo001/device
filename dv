@@ -104,7 +104,10 @@ def rm(name):
         click.echo("error: No device named '{}' found.".format(name))
         return
 
-    del devices[name]
+    if click.confirm("Are you sure you want to remove device '{}'?".format(name), default=None):
+        click.echo("Removed device '{}'".format(name))
+
+        del devices[name]
 
     save_devices(devices)
 
@@ -284,8 +287,7 @@ def rename(old, new):
         del devices[old]
 
         save_devices(devices)
-
-
+    
 
 ### Add all commands
 add.add_command(ssh)
