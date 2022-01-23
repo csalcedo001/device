@@ -9,10 +9,12 @@ root_path = os.path.join(str(pathlib.Path.home()), ".dv")
 devices_json_path = os.path.join(root_path, "devices.json")
 
 
+### Loading data
+
 def load_devices():
     with open(devices_json_path) as input_json:
         devices = json.load(input_json)
-    
+
     return devices
 
 def save_devices(devices):
@@ -23,6 +25,17 @@ def save_devices(devices):
 
 def get_devices_match(ctx, args, incomplete):
     return [k for k in load_devices().keys() if incomplete in k]
+
+
+
+# ### Useful functions
+# 
+# def val_device(devices, name):
+#     if name not in devices:
+#         click.echo("No device named '{}' found.".format(name))
+#         exit()
+
+
 
 ### Main CLI
 
@@ -255,6 +268,28 @@ def cp(source, dest, recursive):
 
     os.system(command)
 
+@click.command()
+@click.argument("old")
+@click.argument("new")
+def rename(old, new):
+    devices = load_devices()
+
+    if old not in devices:
+        click.echo("No device named '{}' found.".format(old))
+        return
+
+    if new in devices:
+        click.echo("Device named '{}' already exists.".format(new))
+        return
+    
+    devices[new] = devices[old]
+    del devices[old]
+
+    save_devices(devices)
+
+
+
+### Add all commands
 cli.add_command(add)
 cli.add_command(rm)
 cli.add_command(ls)
@@ -262,6 +297,7 @@ cli.add_command(info)
 cli.add_command(connect)
 cli.add_command(tunnel)
 cli.add_command(cp)
+cli.add_command(rename)
 
 
 if __name__ == '__main__':
