@@ -94,9 +94,6 @@ def docker(name, container):
 
     save_devices(devices)
 
-add.add_command(ssh)
-add.add_command(docker)
-
 
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
@@ -278,18 +275,22 @@ def rename(old, new):
         click.echo("No device named '{}' found.".format(old))
         return
 
-    if new in devices:
+    if new in devices and new != old:
         click.echo("Device named '{}' already exists.".format(new))
         return
     
-    devices[new] = devices[old]
-    del devices[old]
+    if new != old:
+        devices[new] = devices[old]
+        del devices[old]
 
-    save_devices(devices)
+        save_devices(devices)
 
 
 
 ### Add all commands
+add.add_command(ssh)
+add.add_command(docker)
+
 cli.add_command(add)
 cli.add_command(rm)
 cli.add_command(ls)
