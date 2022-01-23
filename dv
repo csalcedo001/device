@@ -287,7 +287,28 @@ def rename(old, new):
         del devices[old]
 
         save_devices(devices)
+
+@click.command()
+@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
+@click.argument("cmd", type=click.STRING)
+def run(name, cmd):
+    devices = load_devices()
+
+    if name not in devices:
+        click.echo("No device named '{}' found.".format(name))
+        return
+
+    if '"' in cmd:
+        click.echo("No support for commands that contain '\"'. Use \"'\" if possible.")
+        return
+
+    command = 'ssh -t '
+    command += devices[name]["ips"][0] + ' '
+    command += cmd
+
+    os.system(command)
     
+
 
 ### Add all commands
 add.add_command(ssh)
@@ -301,6 +322,7 @@ cli.add_command(connect)
 cli.add_command(tunnel)
 cli.add_command(cp)
 cli.add_command(rename)
+cli.add_command(run)
 
 
 if __name__ == '__main__':
