@@ -29,7 +29,14 @@ def get_devices_match(ctx, args, incomplete):
 
 
 # ### Useful functions
-# 
+
+def command_quote_nest(command, quote='"'):
+    bs = '\\'   # Backslash
+    command = command.replace(bs, bs + bs)
+    command = command.replace(quote, bs + quote)
+    command = quote + command + quote
+    return command
+
 # def val_device(devices, name):
 #     if name not in devices:
 #         click.echo("No device named '{}' found.".format(name))
@@ -158,21 +165,58 @@ def info(name, attribute):
 # Connection commands
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
-def connect(name):
+@click.option("-f", "--force-connection", is_flag=True, default=False)
+def connect(name, force_connection):
     devices = load_devices()
 
-    if name not in devices:
-        click.echo("No device named '{}' found.".format(name))
+    names = name.split(':')
+    types = []
+    for name in names:
+        if name in devices:
+            types.append(devices[name]["type"])
+        else:
+            if not force_connection:
+                click.echo("No device named '{}' found. If this is a URL and want to reference it, run with the flag -f.".format(name))
+                return
+            else:
+                types.append("ip")    # In this case, name isn't a name but an IP
+
+    if ("ssh" in types or "ip" in types) and "docker" in types:
+        click.echo("Connection through an IP and docker container simultaneously is not supported.")
         return
-
-    device_type = devices[name]["type"]
     
-    if device_type == "ssh":
-        command = "ssh " + " -t ssh ".join(devices[name]["ips"])
-    elif device_type == "docker":
-        command = "docker_connect.sh {}".format(devices[name]["container"])
+    if "docker" in types and len(types) > 1:
+        click.echo("Connection through 2 or more docker containers is not supported.")
+        return
+    
 
-    click.echo("Connecting to '{}'...".format(name))
+    if "ssh" in types or "ip" in types:
+        ips = []
+        refs = []
+        for i, name in enumerate(names):
+            if types[i] == "ssh":
+                ips += devices[name]["ips"]
+                refs += devices[name]["ips"][:-1]
+                refs.append(name)
+            else:
+                ips.append(name)
+                refs.append(name)
+
+        command = "ssh " + " -t ssh ".join(ips)
+
+        # Reverse lists
+        ips = ips[::-1]
+        refs = refs[::-1]
+
+        command = "echo 'Connecting to {}...'; ssh ".format(refs[0]) + ips[0]
+
+        for i in range(1, len(ips)):
+               command = "echo 'Connecting to {}...'; ssh ".format(refs[i]) + ips[i] + " -t " + command_quote_nest(command, quote='"')
+
+    elif "docker" in types:
+        command = "docker_connect.sh {}".format(devices[names[0]]["container"])
+    
+    
     os.system(command)
     
 
