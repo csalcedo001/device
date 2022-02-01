@@ -126,8 +126,12 @@ def rm(name):
 def ls():
     devices = load_devices()
 
+    names = list(devices.keys())
+    names.sort()
+
     click.echo("List of available devices:")
-    for name in devices:
+    
+    for name in names:
         click.echo("* {}: type={}".format(name, devices[name]["type"]))
     
     click.echo()
@@ -216,7 +220,7 @@ def connect(name, force_connection):
     elif "docker" in types:
         command = "docker_connect.sh {}".format(devices[names[0]]["container"])
     
-    
+
     os.system(command)
     
 
