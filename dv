@@ -170,7 +170,8 @@ def info(name, attribute):
 @click.command()
 @click.argument("name", type=click.STRING, autocompletion=get_devices_match)
 @click.option("-f", "--force-connection", is_flag=True, default=False)
-def connect(name, force_connection):
+@click.option("-p", "--port", default=None)
+def connect(name, force_connection, port):
     devices = load_devices()
 
     names = name.split(':')
@@ -206,16 +207,24 @@ def connect(name, force_connection):
                 ips.append(name)
                 refs.append(name)
 
-        command = "ssh " + " -t ssh ".join(ips)
-
         # Reverse lists
         ips = ips[::-1]
         refs = refs[::-1]
 
-        command = "echo 'Connecting to {}...'; ssh ".format(refs[0]) + ips[0]
+        def build_command(ref, ip, port=None, subcommand=None):
+            command = "echo 'Connecting to {}...'; ssh ".format(ref)
+            if port is not None:
+                command += "-L {0}:localhost:{0} ".format(port)
+            command += "{} ".format(ip)
+            if subcommand is not None:
+                command += "-t {}".format(command_quote_nest(subcommand, quote='"'))
+            return command
+
+
+        command = build_command(refs[0], ips[0], port=port)
 
         for i in range(1, len(ips)):
-               command = "echo 'Connecting to {}...'; ssh ".format(refs[i]) + ips[i] + " -t " + command_quote_nest(command, quote='"')
+            command = build_command(refs[i], ips[i], port=port, subcommand=command)
 
     elif "docker" in types:
         command = "docker_connect.sh {}".format(devices[names[0]]["container"])
