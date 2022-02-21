@@ -28,7 +28,7 @@ def get_devices_match(ctx, args, incomplete):
 
 
 
-# ### Useful functions
+### Useful functions
 
 def command_quote_nest(command, quote='"'):
     bs = '\\'   # Backslash
@@ -41,6 +41,62 @@ def command_quote_nest(command, quote='"'):
 #     if name not in devices:
 #         click.echo("No device named '{}' found.".format(name))
 #         exit()
+
+
+### Command functions
+
+def build_ssh_command(name, ip, port=None, subcommand=None):
+    command = "echo 'Connecting to {}...'; ssh ".format(name)
+    if port is not None:
+        command += "-L {0}:localhost:{0} ".format(port)
+    command += "{} ".format(ip)
+    if subcommand is not None:
+        command += "-t {}".format(command_quote_nest(subcommand, quote='"'))
+    return command
+
+
+### Referencing
+
+def resolve_reference(ref, force_connection=False, has_path=False):
+    devices = load_devices()
+
+    # Get types
+    refs = ref.split(':')
+    types = []
+    other_i = None
+    for ref in refs:
+        types.append(devices[ref]["type"] if ref in devices else "other")
+        if other_i == None and types[-1] == "other":
+            other_i = len(types) - 1
+
+    if "other" in types and not force_connection and (not has_path or (has_path and other_i != len(types) - 1)):
+        raise Exception("error: No device named '{}' found. If this is a URL and want to reference it, run with the flag -f.".format(refs[other_i]))
+
+    if ("ssh" in types or "other" in types) and "docker" in types:
+        raise Exception("error: Connection through mixed IP and docker container is not supported.", err=True)
+    
+    if "docker" in types and len(types) > 1:
+        raise Exception("error: Connection through 2 or more docker containers is not supported.", err=True)
+    
+
+    # Get names and ips from types
+    names = []
+    ips = []
+    for i, ref in enumerate(refs):
+        if types[i] != "other":
+            key = "ips" if types[i] == "ssh" else "container"
+            names += devices[ref][key][:-1]
+            names.append(ref)
+            ips += devices[ref][key]
+        else:
+            names.append(ref)
+            ips.append(ref)
+
+    # Reverse lists
+    names = names[::-1]
+    ips = ips[::-1]
+
+    return names, types, ips
 
 
 
@@ -65,8 +121,7 @@ def ssh(name, ip):
     devices = load_devices()
     
     if name in devices:
-        click.echo("Device named '{}' already exists.".format(name))
-        return
+        raise Exception("error: Device named '{}' already exists.".format(name))
 
     ips = list(ip)
 
@@ -86,8 +141,7 @@ def docker(name, container):
     devices = load_devices()
     
     if name in devices:
-        click.echo("Device named '{}' already exists.".format(name))
-        return
+        raise Exception("Device named '{}' already exists.".format(name))
 
     if container == None:
         container = name
@@ -108,8 +162,7 @@ def rm(name):
     devices = load_devices()
 
     if name not in devices:
-        click.echo("error: No device named '{}' found.".format(name))
-        return
+        raise Exception("error: No device named '{}' found.".format(name))
 
     if click.confirm("Are you sure you want to remove device '{}'?".format(name), default=None):
         click.echo("Removed device '{}'".format(name))
@@ -147,12 +200,10 @@ def info(name, attribute):
     devices = load_devices()
 
     if name not in devices:
-        click.echo("error: No device named '{}' found.".format(name))
-        return
+        raise Exception("error: No device named '{}' found.".format(name))
     
     if attribute != 'attributes' and attribute not in devices[name]:
-        click.echo("error: No attribute '{}' for device '{}' of type '{}'.".format(attribute, name, devices[name]['type']))
-        return
+        raise Exception("error: No attribute '{}' for device '{}' of type '{}'.".format(attribute, name, devices[name]['type']))
     
     if attribute == 'attributes':
         value = list(devices[name].keys())
@@ -173,84 +224,17 @@ def info(name, attribute):
 @click.option("-p", "--port", default=None)
 def connect(name, force_connection, port):
     devices = load_devices()
+    names, types, ips = resolve_reference(name, force_connection)
 
-    names = name.split(':')
-    types = []
-    for name in names:
-        if name in devices:
-            types.append(devices[name]["type"])
-        else:
-            if not force_connection:
-                click.echo("No device named '{}' found. If this is a URL and want to reference it, run with the flag -f.".format(name))
-                return
-            else:
-                types.append("ip")    # In this case, name isn't a name but an IP
-
-    if ("ssh" in types or "ip" in types) and "docker" in types:
-        click.echo("Connection through an IP and docker container simultaneously is not supported.")
-        return
-    
-    if "docker" in types and len(types) > 1:
-        click.echo("Connection through 2 or more docker containers is not supported.")
-        return
-    
-
-    if "ssh" in types or "ip" in types:
-        ips = []
-        refs = []
-        for i, name in enumerate(names):
-            if types[i] == "ssh":
-                ips += devices[name]["ips"]
-                refs += devices[name]["ips"][:-1]
-                refs.append(name)
-            else:
-                ips.append(name)
-                refs.append(name)
-
-        # Reverse lists
-        ips = ips[::-1]
-        refs = refs[::-1]
-
-        def build_command(ref, ip, port=None, subcommand=None):
-            command = "echo 'Connecting to {}...'; ssh ".format(ref)
-            if port is not None:
-                command += "-L {0}:localhost:{0} ".format(port)
-            command += "{} ".format(ip)
-            if subcommand is not None:
-                command += "-t {}".format(command_quote_nest(subcommand, quote='"'))
-            return command
-
-
-        command = build_command(refs[0], ips[0], port=port)
+    if "ssh" in types or "other" in types:
+        command = build_ssh_command(names[0], ips[0], port=port)
 
         for i in range(1, len(ips)):
-            command = build_command(refs[i], ips[i], port=port, subcommand=command)
+            command = build_ssh_command(names[i], ips[i], port=port, subcommand=command)
 
     elif "docker" in types:
         command = "docker_connect.sh {}".format(devices[names[0]]["container"])
-    
 
-    os.system(command)
-    
-
-
-@click.command()
-@click.argument("name", type=click.STRING, autocompletion=get_devices_match)
-@click.argument("port")
-def tunnel(name, port):
-    devices = load_devices()
-
-    if name not in devices:
-        click.echo("No device named '{}' found.".format(name))
-        return
-
-    device_type = devices[name]["type"]
-
-    if device_type == "ssh":
-        ssh_command = "ssh -L {0}:localhost:{0} ".format(port)
-        command = ssh_command + (" -t " + ssh_command).join(devices[name]["ips"])
-
-    click.echo("Tunneling to '{}' through port '{}'...".format(name, port))
     os.system(command)
 
 
@@ -261,13 +245,11 @@ def tunnel(name, port):
 def cp(source, dest, recursive):
     source_parts = source.split(":")
     if len(source_parts) > 2:
-        click.echo("error: Invalid source {}.".format(source))
-        return
+        raise Exception("error: Invalid source {}.".format(source))
 
     dest_parts = dest.split(":")
     if len(dest_parts) > 2:
-        click.echo("error: Invalid destination {}.".format(dest))
-        return
+        raise Exception("error: Invalid destination {}.".format(dest))
 
     
     devices = load_devices()
@@ -282,8 +264,7 @@ def cp(source, dest, recursive):
         device = devices[source_parts[0]]
 
         if device["type"] == "docker":
-            click.echo("error: copy command for device of type 'docker' is not supported.")
-            return
+            raise Exception("error: copy command for device of type 'docker' is not supported.")
 
         source_path = device["ips"][-1] + ":" + source_parts[1]
         if len(device["ips"]) == 1:
@@ -295,8 +276,7 @@ def cp(source, dest, recursive):
             
             flags += proxy_command
         else:
-            click.echo("error: copy command for more than 2 IPs is not supported.")
-            return
+            raise Exception("error: copy command for more than 2 IPs is not supported.")
 
     
     if len(dest_parts) == 1 or not dest_parts[0] in devices:
@@ -305,8 +285,7 @@ def cp(source, dest, recursive):
         device = devices[dest_parts[0]]
 
         if device["type"] == "docker":
-            click.echo("error: copy command for device of type 'docker' is not supported.")
-            return
+            raise Exception("error: copy command for device of type 'docker' is not supported.")
 
         dest_path = device["ips"][-1] + ":" + dest_parts[1]
         if len(device["ips"]) == 1:
@@ -318,8 +297,7 @@ def cp(source, dest, recursive):
             
             flags += proxy_command
         else:
-            click.echo("error: copy command for more than 2 IPs is not supported.")
-            return
+            raise Exception("error: copy command for more than 2 IPs is not supported.")
 
     command = "scp {} {} {}".format(flags, source_path, dest_path)
 
@@ -332,12 +310,10 @@ def rename(old, new):
     devices = load_devices()
 
     if old not in devices:
-        click.echo("No device named '{}' found.".format(old))
-        return
+        raise Exception("error: No device named '{}' found.".format(old))
 
     if new in devices and new != old:
-        click.echo("Device named '{}' already exists.".format(new))
-        return
+        raise Exception("error: Device named '{}' already exists.".format(new))
     
     if new != old:
         devices[new] = devices[old]
@@ -352,12 +328,10 @@ def run(name, cmd):
     devices = load_devices()
 
     if name not in devices:
-        click.echo("No device named '{}' found.".format(name))
-        return
+        raise Exception("error: No device named '{}' found.".format(name))
 
-    if '"' in cmd:
-        click.echo("No support for commands that contain '\"'. Use \"'\" if possible.")
-        return
+    # if '"' in cmd:
+    #     raise Exception("error: No support for commands that contain '\"'. Use \"'\" if possible.")
 
     command = 'ssh -t '
     command += devices[name]["ips"][0] + ' '
@@ -376,7 +350,6 @@ cli.add_command(rm)
 cli.add_command(ls)
 cli.add_command(info)
 cli.add_command(connect)
-cli.add_command(tunnel)
 cli.add_command(cp)
 cli.add_command(rename)
 cli.add_command(run)
@@ -388,4 +361,7 @@ if __name__ == '__main__':
     if not os.path.exists(devices_json_path):
         save_devices({})
         
-    cli()
+    try:
+        cli()
+    except Exception as e:
+        click.echo(e)
