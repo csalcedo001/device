@@ -92,10 +92,6 @@ def resolve_reference(ref, force_connection=False, has_path=False):
             names.append(ref)
             ips.append(ref)
 
-    # Reverse lists
-    names = names[::-1]
-    ips = ips[::-1]
-
     return names, types, ips
 
 
@@ -226,6 +222,10 @@ def connect(name, force_connection, port):
     devices = load_devices()
     names, types, ips = resolve_reference(name, force_connection)
 
+    # Reverse lists
+    names = names[::-1]
+    ips = ips[::-1]
+
     if "ssh" in types or "other" in types:
         command = build_ssh_command(names[0], ips[0], port=port)
 
@@ -242,66 +242,35 @@ def connect(name, force_connection, port):
 @click.argument("source")
 @click.argument("dest")
 @click.option("-r", "--recursive", is_flag=True, default=False)
-def cp(source, dest, recursive):
-    source_parts = source.split(":")
-    if len(source_parts) > 2:
-        raise Exception("error: Invalid source {}.".format(source))
+@click.option("-f", "--force-connection", is_flag=True, default=False)
+def cp(source, dest, recursive, force_connection):
+    _, src_types, src_ips = resolve_reference(source, force_connection=force_connection, has_path=True)
+    _, dst_types, dst_ips = resolve_reference(dest, force_connection=force_connection, has_path=True)
 
-    dest_parts = dest.split(":")
-    if len(dest_parts) > 2:
-        raise Exception("error: Invalid destination {}.".format(dest))
+    if "docker" in src_types + dst_types:
+        raise Exception("error: copy command for device of type 'docker' is not supported.")
 
+    if len(src_ips) > 1 and len(dst_ips) > 1:
+        raise Exception("error: copy from one remote server to another remote server is not supported.")
+
+    if len(src_ips) > 1:
+        proxy_ips = src_ips[:-2]
+        src = ':'.join(src_ips[-2:])
+        dst = dst_ips[0]
+    else:
+        proxy_ips = dst_ips[:-2]
+        src = src_ips[0]
+        dst = ':'.join(dst_ips[-2:])
     
-    devices = load_devices()
-    
-    flags = ""
+    command = "scp "
     if recursive:
-        flags += "-r "
-    
-    if len(source_parts) == 1 or not source_parts[0] in devices:
-        source_path = source
-    else:
-        device = devices[source_parts[0]]
-
-        if device["type"] == "docker":
-            raise Exception("error: copy command for device of type 'docker' is not supported.")
-
-        source_path = device["ips"][-1] + ":" + source_parts[1]
-        if len(device["ips"]) == 1:
-            pass
-        elif len(device["ips"]) == 2:
-            proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
-            proxy_command += device["ips"][0]
-            proxy_command += "\" "
-            
-            flags += proxy_command
-        else:
-            raise Exception("error: copy command for more than 2 IPs is not supported.")
-
-    
-    if len(dest_parts) == 1 or not dest_parts[0] in devices:
-        dest_path = dest
-    else:
-        device = devices[dest_parts[0]]
-
-        if device["type"] == "docker":
-            raise Exception("error: copy command for device of type 'docker' is not supported.")
-
-        dest_path = device["ips"][-1] + ":" + dest_parts[1]
-        if len(device["ips"]) == 1:
-            pass
-        elif len(device["ips"]) == 2:
-            proxy_command = "-oProxyCommand=\"ssh -W %h:%p "
-            proxy_command += device["ips"][0]
-            proxy_command += "\" "
-            
-            flags += proxy_command
-        else:
-            raise Exception("error: copy command for more than 2 IPs is not supported.")
-
-    command = "scp {} {} {}".format(flags, source_path, dest_path)
+        command += "-r "
+    if len(proxy_ips) > 0:
+        command += '-oProxyJump=' + ','.join(proxy_ips) + ' '
+    command += src + ' ' + dst
 
     os.system(command)
+
 
 @click.command()
 @click.argument("old")
